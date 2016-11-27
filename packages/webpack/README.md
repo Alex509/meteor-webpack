@@ -1,3 +1,5 @@
+# WARNING: This project is no longer in active maintenance. If you would like to maintain it, contact me at benoit@thereactivestack.com
+
 # webpack:webpack by <a href="https://thereactivestack.com">The Reactive Stack</a>
 Seamlessly integrate Webpack to improve Meteor build system<br />
 **Compatible with Meteor 1.2 and 1.3**
