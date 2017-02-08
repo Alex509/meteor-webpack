@@ -492,7 +492,7 @@ function prepareConfig(target, webpackConfig, usingDevServer, settings) {
 
   webpackConfig.output.path = '/memory/webpack';
   webpackConfig.output.publicPath = IS_DEBUG ? webpackConfig.devServer.protocol + '//' + webpackConfig.devServer.host + ':' + webpackConfig.devServer.port + '/assets/' : '/assets/';
-  webpackConfig.output.filename = target + '.js';
+  webpackConfig.output.filename = target + '[hash].js';
 
   if (!webpackConfig.plugins) {
     webpackConfig.plugins = [];
