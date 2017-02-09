@@ -492,7 +492,8 @@ function prepareConfig(target, webpackConfig, usingDevServer, settings) {
 
   webpackConfig.output.path = '/memory/webpack';
   webpackConfig.output.publicPath = IS_DEBUG ? webpackConfig.devServer.protocol + '//' + webpackConfig.devServer.host + ':' + webpackConfig.devServer.port + '/assets/' : '/assets/';
-  webpackConfig.output.filename = target + '[hash].js';
+  webpackConfig.output.filename = target + '.js';
+  webpackConfig.output.chunkFilename = '[chunkhash].js';
 
   if (!webpackConfig.plugins) {
     webpackConfig.plugins = [];
@@ -531,7 +532,7 @@ function prepareConfig(target, webpackConfig, usingDevServer, settings) {
   webpackConfig.plugins.unshift(new webpack.DefinePlugin(definePlugin));
 
   if (!IS_DEBUG) {
-    // Production optimizations
+   // Production optimizations
     webpackConfig.plugins.push(new webpack.optimize.UglifyJsPlugin({
       compress: {
         warnings: true
@@ -547,8 +548,9 @@ function prepareConfig(target, webpackConfig, usingDevServer, settings) {
     webpackConfig.plugins.push(new webpack.HotModuleReplacementPlugin());
     webpackConfig.plugins.push(new webpack.NoErrorsPlugin());
   }
-}
 
+  webpackConfig.plugins.push(new webpack.optimize.MinChunkSizePlugin({minChunkSize: 1000000}));
+}
 const compilers = {};
 
 function compile(target, entryFile, configFiles, webpackConfig) {
@@ -675,7 +677,8 @@ function addAssets(target, file, fs) {
       } else {
         file.addAsset({
           path: 'assets/' + asset,
-          data
+          data,
+          hash: require('crypto').createHash('md5').update(data).digest('hex')
         });
       }
     }
