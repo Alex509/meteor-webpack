@@ -25,6 +25,7 @@ Package.registerBuildPlugin({
       'webpack': '1.13.0',
       'webpack-dev-middleware': '1.6.1',
       'webpack-hot-middleware': '2.10.0',
+      'webpack-node-externals': '1.5.4',
       'memory-fs': '0.3.0',
       'mime': '1.3.4'
     }
