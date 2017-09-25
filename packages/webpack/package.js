@@ -1,13 +1,13 @@
 Package.describe({
-    name: 'webpack:webpack',
-    version: '1.3.4',
+    name: 'alex509:webpack',
+    version: '1.3.5',
     summary: 'Seamlessly integrate Webpack to improve Meteor build system',
     git: 'https://github.com/thereactivestack/meteor-webpack.git',
     documentation: 'README.md'
 });
 
 Package.registerBuildPlugin({
-    name: 'webpack:webpack',
+    name: 'alex509:webpack',
     use: [
       'meteor',
       'ecmascript@0.1.5',
@@ -26,7 +26,8 @@ Package.registerBuildPlugin({
       'webpack-dev-middleware': '1.6.1',
       'webpack-hot-middleware': '2.10.0',
       'memory-fs': '0.3.0',
-      'mime': '1.3.4'
+      'mime': '1.3.4',
+      'extract-text-webpack-plugin': '1.0.1'
     }
 });
 
