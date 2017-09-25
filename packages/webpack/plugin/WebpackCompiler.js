@@ -390,11 +390,7 @@ function requirePolyfill(module) {
     return _path;
   }
 
-  try {
-    return NpmWorkaround.require(CWD + '/node_modules/' + module);
-  } catch(e) {}
-
-  return NpmWorkaround.require(module);
+  return Npm.require(module);
 }
 
 function readWebpackConfig(webpackConfig, target, file, filePath, data) {
