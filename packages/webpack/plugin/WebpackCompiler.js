@@ -1,6 +1,7 @@
 const webpack = Npm.require('webpack');
 const _ = Npm.require('underscore');
 const MemoryFS = Npm.require('memory-fs');
+const CircularDependencyPlugin = require('circular-dependency-plugin')
 
 const fs = Plugin.fs;
 const path = Plugin.path;
@@ -526,6 +527,16 @@ function prepareConfig(target, webpackConfig, usingDevServer, settings) {
   }
 
   webpackConfig.plugins.unshift(new webpack.DefinePlugin(definePlugin));
+  webpackConfig.plugins.unshift(new CircularDependencyPlugin({
+
+    // exclude detection of files based on a RegExp
+    exclude: /node_modules/,
+      // add errors to webpack instead of warnings
+    failOnError: true,
+    // set the current working directory for displaying module paths
+    cwd: process.cwd(),
+
+  }));
 
   if (!IS_DEBUG) {
    // Production optimizations
