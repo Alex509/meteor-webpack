@@ -3,9 +3,9 @@ var weight = 200;
 function dependencies(settings) {
   return {
     devDependencies: {
-      'style-loader' : '^0.13.0',
-      'css-loader': '^0.23.0',
-      'extract-text-webpack-plugin': '^0.9.1'
+      'style-loader' : '^0.20.0',
+      'css-loader': '^0.28.0',
+      'extract-text-webpack-plugin': '^3.0.2'
     }
   };
 }
@@ -76,7 +76,7 @@ function config(settings, require) {
   }
 
   return {
-    loaders: loaders,
+    rules: [{ test: /\.css$/, use: [{ loader: 'css-loader'}] }],
     plugins: plugins,
     extensions: ['.css']
   };

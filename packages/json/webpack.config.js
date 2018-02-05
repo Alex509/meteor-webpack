@@ -10,7 +10,7 @@ function dependencies(settings) {
 
 function config() {
   return {
-    loaders: [{ test: /\.json$/, loader: 'json' }],
+    rules: [{ test: /\.json$/, use: [{ loader: 'json-loader' }] }],
     extensions: ['.json']
   };
 }

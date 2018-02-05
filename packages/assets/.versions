@@ -1,4 +1,4 @@
 meteor@1.1.12
 underscore@1.0.6
-webpack:assets@1.0.1
-webpack:core-config@1.0.1
+webpack:assets@2.0.0
+webpack:core-config@2.0.0

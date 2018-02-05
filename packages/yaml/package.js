@@ -1,13 +1,12 @@
 Package.describe({
-    name: 'webpack:less',
-    version: '1.1.2',
-    summary: 'Integrate LESS import with Webpack',
+    name: 'alex509:yaml',
+    version: '2.0.0',
+    summary: 'Integrate Yaml import (.yml) with Webpack',
     git: 'https://github.com/thereactivestack/meteor-webpack.git',
     documentation: 'README.md'
 });
 
 Package.onUse(function(api) {
-  api.use('webpack:core-config@1.0.1');
-  api.use('webpack:css@1.1.1');
+  api.use('webpack:core-config@2.0.0');
   api.add_files(['webpack.config.js']);
 });

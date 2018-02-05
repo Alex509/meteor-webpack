@@ -1,8 +1,7 @@
 const webpack = Npm.require('webpack');
-const _ = Npm.require('underscore');
+const _ = Npm.require('lodash');
 const MemoryFS = Npm.require('memory-fs');
-const CircularDependencyPlugin = require('circular-dependency-plugin')
-
+const CircularDependencyPlugin = Npm.require('circular-dependency-plugin');
 const fs = Plugin.fs;
 const path = Plugin.path;
 
@@ -15,9 +14,9 @@ const connect = Npm.require('connect');
 const cors = Npm.require('cors');
 
 let devServerApp = null;
-let devServerMiddleware = {};
-let devServerHotMiddleware = {};
-let configHashes = {};
+const devServerMiddleware = {};
+const devServerHotMiddleware = {};
+const configHashes = {};
 let webpackStats = null;
 
 const CWD = _path.resolve('./');
@@ -78,7 +77,7 @@ WebpackCompiler = class WebpackCompiler {
       entryFile = files.find(file => file.getPathInPackage() === entryFileName);
 
       if (!entryFile) {
-        console.error('Cannot find the entry point "' + entryFileName + '" for the ' + shortName);
+        console.error(`Cannot find the entry point "${entryFileName}" for the ${shortName}`);
         process.exit(1);
       }
 
@@ -92,15 +91,16 @@ WebpackCompiler = class WebpackCompiler {
     const settingsFiles = filterFiles(files, ['webpack.json']);
     const settings = readSettings(settingsFiles, shortName);
 
-    let webpackConfig = {
+    const webpackConfig = {
       context: CWD,
       entry,
       module: {
-        loaders: []
+        rules: []
       },
       plugins: [],
       resolve: {
-        extensions: ['']
+        extensions: [],
+        modules: ['node_modules', _path.join(CWD, 'node_modules')]
       },
       externals: {},
       devServer: settings.devServer,
@@ -108,9 +108,8 @@ WebpackCompiler = class WebpackCompiler {
     };
 
     if (settings.root && typeof settings.root === 'string') {
-      webpackConfig.resolve.root = _path.join(CWD, settings.root);
+      webpackConfig.resolve.modules.push(_path.join(CWD, settings.root));
     }
-
     // support "resolve.modules" to write cleaner import statements
     if (
       settings.resolve &&
@@ -118,8 +117,8 @@ WebpackCompiler = class WebpackCompiler {
       typeof settings.resolve.modules === 'object' &&
       Array.isArray(settings.resolve.modules)
     ) {
-      webpackConfig.resolve.modulesDirectories = settings.resolve.modules;
-      webpackConfig.resolve.modules = settings.resolve.modules;
+      webpackConfig.resolve.modules = webpackConfig.resolve.modules.concat(settings.resolve.modules.map(module => _path.join(_path.join(CWD, settings.root), module)));
+    //  webpackConfig.resolve.modulesDirectories = settings.resolve.modules;
     }
 
     // support "resolve.alias" to write shorter import statements
@@ -137,7 +136,7 @@ WebpackCompiler = class WebpackCompiler {
     }
 
     if (settings.noParse && typeof settings.noParse === 'object' && Array.isArray(settings.noParse)) {
-      webpackConfig.module.noParse = new RegExp('(' + settings.noParse.join('|') + ')');
+      webpackConfig.module.noParse = new RegExp(`(${settings.noParse.join('|')})`);
     }
 
     const unibuilds = files[0]._resourceSlot.packageSourceBatch.processor.unibuilds;
@@ -149,20 +148,19 @@ WebpackCompiler = class WebpackCompiler {
     if (!PROCESS_ENV.IS_MIRROR) {
       updateNpmPackages(shortName, configs);
     }
-
     configs.load();
-
+    // console.log(require('util').inspect(webpackConfig, { depth: 8 }));
     runWebpack(shortName, webpackConfig, entryFile, configFiles, settings);
 
     // Every startup.js files are sent directly to Meteor
-    files.filter(file => file.getBasename() === 'meteor.startup.js').forEach(file => {
+    files.filter(file => file.getBasename() === 'meteor.startup.js').forEach((file) => {
       file.addJavaScript({
         path: file.getPathInPackage(),
         data: file.getContentsAsString()
       });
     });
   }
-}
+};
 
 function getEntryFileName(platform) {
   let name;
@@ -170,8 +168,8 @@ function getEntryFileName(platform) {
   try {
     const pkg = JSON.parse(fs.readFileSync(path.join(CWD, 'package.json')).toString());
     name = platform === 'server' ? pkg.main : pkg.browser || pkg.main;
-  } catch(e) {
-    console.error('Error in your package.json: ' + e.message);
+  } catch (e) {
+    console.error(`Error in your package.json: ${e.message}`);
     process.exit(1);
   }
 
@@ -181,11 +179,11 @@ function getEntryFileName(platform) {
 function readSettings(settingsFiles, platform) {
   let settings = {};
 
-  settingsFiles.forEach(file => {
+  settingsFiles.forEach((file) => {
     try {
       const setting = JSON.parse(file.getContentsAsString());
       settings = _.extend(settings, setting);
-    } catch(e) {
+    } catch (e) {
       file.error({
         message: e.message
       });
@@ -200,16 +198,16 @@ function readSettings(settingsFiles, platform) {
   return settings;
 }
 
-let npmPackagesCache = { web: {}, cordova: {}, server: {} };
+const npmPackagesCache = { web: {}, cordova: {}, server: {} };
 
 function updateNpmPackages(target, configs) {
   // List the dependencies
   // Fix peer dependencies for webpack
   // webpack-hot-middleware is required for HMR
 
-  let dependencies = configs.dependencies;
+  const dependencies = configs.dependencies;
 
-  let devDependencies = _.extend({
+  const devDependencies = _.extend({
     'webpack': '^1.13.0',
     'webpack-hot-middleware': '^2.10.0'
   }, configs.devDependencies);
@@ -219,7 +217,7 @@ function updateNpmPackages(target, configs) {
 
   try {
     pkg = JSON.parse(fs.readFileSync(packageFile).toString());
-  } catch(e) {
+  } catch (e) {
     // Do nothing if we can't read the file
   }
 
@@ -233,14 +231,14 @@ function updateNpmPackages(target, configs) {
 
   let hasChanged = false;
 
-  for (let depName in dependencies) {
+  for (const depName in dependencies) {
     if (isNpmPackageOlder(dependencies[depName], pkg.dependencies[depName])) {
       pkg.dependencies[depName] = dependencies[depName];
       hasChanged = true;
     }
   }
 
-  for (let depName in devDependencies) {
+  for (const depName in devDependencies) {
     if (isNpmPackageOlder(devDependencies[depName], pkg.devDependencies[depName])) {
       pkg.devDependencies[depName] = devDependencies[depName];
       hasChanged = true;
@@ -249,7 +247,7 @@ function updateNpmPackages(target, configs) {
 
   if (hasChanged) {
     fs.writeFileSync(packageFile, JSON.stringify(pkg, null, 2));
-    console.log('Your package.json has been updated. Please, run npm install in your project directory.')
+    console.log('Your package.json has been updated. Please, run npm install in your project directory.');
     process.exit(1);
   }
 }
@@ -292,7 +290,7 @@ function isNpmPackageOlder(depVersion, currentVersion) {
 }
 
 function runWebpack(shortName, webpackConfig, entryFile, configFiles, settings) {
-  configFiles.forEach(configFile => {
+  configFiles.forEach((configFile) => {
     const filePath = configFile.getPathInPackage();
     const data = configFile.getContentsAsString();
 
@@ -328,7 +326,7 @@ function readPackageConfig(platform, webpackConfig, unibuilds, settings) {
         deps = _.extend(deps, dep.dependencies);
         devDeps = _.extend(devDeps, dep.devDependencies);
         configs.push({ weight, config });
-      } catch(e) {
+      } catch (e) {
         console.error(e);
       }
     }
@@ -342,12 +340,12 @@ function readPackageConfig(platform, webpackConfig, unibuilds, settings) {
     dependencies: deps,
     devDependencies: devDeps,
     load: () => {
-      configs.forEach(config => {
+      configs.forEach((config) => {
         try {
           const result = config(settings, requirePolyfill);
 
-          if (result.loaders) {
-            webpackConfig.module.loaders = webpackConfig.module.loaders.concat(result.loaders);
+          if (result.rules) {
+            webpackConfig.module.rules = webpackConfig.module.rules.concat(result.rules);
           }
 
           if (result.plugins) {
@@ -360,17 +358,17 @@ function readPackageConfig(platform, webpackConfig, unibuilds, settings) {
 
           // Save the configs we want to set in the webpack config directly (like postcss)
           if (result.config && typeof result.config === 'object') {
-            for (let key in result.config) {
+            for (const key in result.config) {
               webpackConfig[key] = result.config[key];
             }
           }
 
           if (result.externals) {
-            for (let key in result.externals) {
+            for (const key in result.externals) {
               webpackConfig.externals[key] = result.externals[key];
             }
           }
-        } catch(e) {
+        } catch (e) {
           console.error(e.stack);
         }
       });
@@ -395,8 +393,8 @@ function requirePolyfill(module) {
 }
 
 function readWebpackConfig(webpackConfig, target, file, filePath, data) {
-  let module = { exports: {} };
-  var fileSplit = filePath.split('/');
+  const module = { exports: {} };
+  const fileSplit = filePath.split('/');
   fileSplit.pop();
 
   const __dirname = _path.join(CWD, fileSplit.join(_path.sep));
@@ -421,7 +419,7 @@ function readWebpackConfig(webpackConfig, target, file, filePath, data) {
     if (module.exports && !module.exports.context && module.exports.entry) {
       module.exports.context = __dirname;
     }
-  } catch(e) {
+  } catch (e) {
     file.error({
       message: e.message
     });
@@ -466,12 +464,12 @@ function prepareConfig(target, webpackConfig, usingDevServer, settings) {
   }
 
   if (usingDevServer) {
-    let options = 'path=' + webpackConfig.devServer.protocol + '//' + webpackConfig.devServer.host + ':' + webpackConfig.devServer.port + '/__webpack_hmr';
+    let options = `path=${webpackConfig.devServer.protocol}//${webpackConfig.devServer.host}:${webpackConfig.devServer.port}/__webpack_hmr`;
 
     if (webpackConfig.hotMiddleware) {
-      for (let key in webpackConfig.hotMiddleware) {
+      for (const key in webpackConfig.hotMiddleware) {
         const val = webpackConfig.hotMiddleware[key];
-        options += '&' + key + '=';
+        options += `&${key}=`;
 
         if (typeof val === 'boolean') {
           options += val ? 'true' : 'false';
@@ -482,14 +480,14 @@ function prepareConfig(target, webpackConfig, usingDevServer, settings) {
     }
 
     webpackConfig.entry = [].concat(
-      'webpack-hot-middleware/client?' + options,
+      `webpack-hot-middleware/client?${options}`,
       webpackConfig.entry
     );
   }
 
   webpackConfig.output.path = '/memory/webpack';
-  webpackConfig.output.publicPath = IS_DEBUG ? webpackConfig.devServer.protocol + '//' + webpackConfig.devServer.host + ':' + webpackConfig.devServer.port + '/assets/' : '/assets/';
-  webpackConfig.output.filename = target + '.js';
+  webpackConfig.output.publicPath = IS_DEBUG ? `${webpackConfig.devServer.protocol}//${webpackConfig.devServer.host}:${webpackConfig.devServer.port}/assets/` : '/assets/';
+  webpackConfig.output.filename = `${target}.js`;
   webpackConfig.output.chunkFilename = '[chunkhash].js';
 
   if (!webpackConfig.plugins) {
@@ -500,7 +498,7 @@ function prepareConfig(target, webpackConfig, usingDevServer, settings) {
     webpackConfig.plugins.unshift(new webpack.optimize.DedupePlugin());
   }
 
-  let definePlugin = {
+  const definePlugin = {
     'process.env.NODE_ENV': JSON.stringify(IS_DEBUG ? 'development' : 'production'),
     'Meteor.isClient': JSON.stringify(target !== 'server'),
     'Meteor.isServer': JSON.stringify(target === 'server'),
@@ -518,12 +516,12 @@ function prepareConfig(target, webpackConfig, usingDevServer, settings) {
     'Package.meteor.Meteor.isAppTest': JSON.stringify(IS_FULLAPP_TEST)
   };
 
-  for (let name in PROCESS_ENV) {
+  for (const name in PROCESS_ENV) {
     if (name === 'NODE_ENV') {
       continue;
     }
 
-    definePlugin['process.env.' + name] = JSON.stringify(PROCESS_ENV[name]);
+    definePlugin[`process.env.${name}`] = JSON.stringify(PROCESS_ENV[name]);
   }
 
   webpackConfig.plugins.unshift(new webpack.DefinePlugin(definePlugin));
@@ -531,7 +529,7 @@ function prepareConfig(target, webpackConfig, usingDevServer, settings) {
 
     // exclude detection of files based on a RegExp
     exclude: /node_modules/,
-      // add errors to webpack instead of warnings
+    // add errors to webpack instead of warnings
     failOnError: true,
     // set the current working directory for displaying module paths
     cwd: process.cwd(),
@@ -539,7 +537,7 @@ function prepareConfig(target, webpackConfig, usingDevServer, settings) {
   }));
 
   if (!IS_DEBUG) {
-   // Production optimizations
+    // Production optimizations
     webpackConfig.plugins.push(new webpack.optimize.UglifyJsPlugin({
       compress: {
         warnings: true
@@ -553,10 +551,9 @@ function prepareConfig(target, webpackConfig, usingDevServer, settings) {
 
   if (usingDevServer) {
     webpackConfig.plugins.push(new webpack.HotModuleReplacementPlugin());
-    webpackConfig.plugins.push(new webpack.NoErrorsPlugin());
   }
 
-  webpackConfig.plugins.push(new webpack.optimize.MinChunkSizePlugin({minChunkSize: 1000000}));
+  webpackConfig.plugins.push(new webpack.optimize.MinChunkSizePlugin({ minChunkSize: 1000000 }));
 }
 const compilers = {};
 
@@ -566,15 +563,15 @@ function compile(target, entryFile, configFiles, webpackConfig) {
     compilers[target].outputFileSystem = new MemoryFS();
 
     configHashes[target] = {};
-    configFiles.forEach(file => { configHashes[target][file.getSourceHash()] = true; });
+    configFiles.forEach((file) => { configHashes[target][file.getSourceHash()] = true; });
   }
 
   const file = entryFile || configFiles[0];
   const fs = compilers[target].outputFileSystem;
   let errors = null;
 
-  Meteor.wrapAsync(done => {
-    compilers[target].run(function(err, stats) {
+  Meteor.wrapAsync((done) => {
+    compilers[target].run((err, stats) => {
       if (stats) {
         if (stats.hasErrors()) {
           errors = stats.toJson({ errorDetails: true }).errors;
@@ -585,7 +582,7 @@ function compile(target, entryFile, configFiles, webpackConfig) {
           webpackStats = stats.toJson({ chunks: true });
 
           // Only keep what we need for code splitting
-          for (var key in webpackStats) {
+          for (const key in webpackStats) {
             if (key !== 'assetsByChunkName' && key !== 'publicPath') {
               delete webpackStats[key];
             }
@@ -606,7 +603,7 @@ function compile(target, entryFile, configFiles, webpackConfig) {
   })();
 
   if (errors) {
-    for (let error of errors) {
+    for (const error of errors) {
       file.error({
         message: error
       });
@@ -624,7 +621,7 @@ function compile(target, entryFile, configFiles, webpackConfig) {
     // In case the source map isn't in a file
     try {
       sourceMapData = fs.readFileSync(sourceMapPath);
-    } catch(e) {}
+    } catch (e) {}
 
     if (sourceMapData) {
       sourceMap = JSON.parse(sourceMapData.toString());
@@ -635,24 +632,24 @@ function compile(target, entryFile, configFiles, webpackConfig) {
 
     if (target === 'server') {
       data =
-        'if (typeof global.jQuery === \'undefined\') { global.jQuery = {}; }\n' + // Polyfill so importing jquery in a file doesn't crash the server
-        'WebpackStats = ' + JSON.stringify(webpackStats) + ';\n' + // Infos on Webpack build
-        data;
+        `${'if (typeof global.jQuery === \'undefined\') { global.jQuery = {}; }\n' + // Polyfill so importing jquery in a file doesn't crash the server
+        'WebpackStats = '}${JSON.stringify(webpackStats)};\n${ // Infos on Webpack build
+          data}`;
 
       if (IS_BUILD) {
         // Copy the NPM modules you need in production for the server
         // Meteor 1.3 might fix that later ¯\_(ツ)_/¯
-        data = 'global.require = ' + function(module) {
+        data = `global.require = ${function(module) {
           return Npm.require(module);
-        }.toString() + ';\n' + data;
+        }.toString()};\n${data}`;
       } else {
         // Polyfill the require to Meteor require
-        data = 'global.require = Npm.require;\n' + data;
+        data = `global.require = Npm.require;\n${data}`;
       }
     }
 
     file.addJavaScript({
-      path: target + '.js',
+      path: `${target}.js`,
       data,
       sourceMap
     });
@@ -671,19 +668,19 @@ function compile(target, entryFile, configFiles, webpackConfig) {
 function addAssets(target, file, fs) {
   const assets = fs.readdirSync('/memory/webpack');
 
-  for (let asset of assets) {
-    if (asset !== target + '.js' && asset !== target + '.js.map') {
-      const data = fs.readFileSync('/memory/webpack/' + asset);
+  for (const asset of assets) {
+    if (asset !== `${target}.js` && asset !== `${target}.js.map`) {
+      const data = fs.readFileSync(`/memory/webpack/${asset}`);
 
       // Send CSS files to Meteor
       if (/\.css$/.test(asset)) {
         file.addStylesheet({
-          path: 'assets/' + asset,
+          path: `assets/${asset}`,
           data: data.toString()
         });
       } else {
         file.addAsset({
-          path: 'assets/' + asset,
+          path: `assets/${asset}`,
           data,
           hash: require('crypto').createHash('md5').update(data).digest('hex')
         });
@@ -698,7 +695,7 @@ function compileDevServer(target, entryFile, configFiles, webpackConfig) {
 
     file.addJavaScript({
       path: 'webpack.conf.js',
-      data: '__WebpackDevServerConfig__ = ' + JSON.stringify(webpackConfig.devServer) + ';'
+      data: `__WebpackDevServerConfig__ = ${JSON.stringify(webpackConfig.devServer)};`
     });
   }
 
@@ -708,7 +705,7 @@ function compileDevServer(target, entryFile, configFiles, webpackConfig) {
   }
 
   configHashes[target] = {};
-  configFiles.forEach(file => { configHashes[target][file.getSourceHash()] = true; });
+  configFiles.forEach((file) => { configHashes[target][file.getSourceHash()] = true; });
 
   if (!devServerApp) {
     devServerApp = connect();
@@ -753,7 +750,7 @@ function compileDevServer(target, entryFile, configFiles, webpackConfig) {
     watchOptions: webpackConfig.watchOptions
   });
 
-  devServerHotMiddleware[target] = Npm.require('webpack-hot-middleware')(compiler,webpackConfig.devServer);
+  devServerHotMiddleware[target] = Npm.require('webpack-hot-middleware')(compiler, webpackConfig.devServer);
 
   devServerApp.use(devServerMiddleware[target]);
   devServerApp.use(devServerHotMiddleware[target]);
@@ -772,7 +769,7 @@ function generateExternals(webpackConfig, isobuilds) {
   // Support import from Meteor packages
   for (let i = 0; i < isobuilds.length; ++i) {
     const { declaredExports } = isobuilds[i];
-    webpackConfig.externals['meteor/' + isobuilds[i].pkg.name] = 'Package[\'' + isobuilds[i].pkg.name + '\']';
+    webpackConfig.externals[`meteor/${isobuilds[i].pkg.name}`] = `Package['${isobuilds[i].pkg.name}']`;
   }
 }
 
@@ -783,8 +780,7 @@ function generateTestRunner() {
     file !== 'packages' &&
     file !== 'node_modules' &&
     file !== 'bower_components' &&
-    _fs.statSync(_path.join(CWD, file)).isDirectory()
-  );
+    _fs.statSync(_path.join(CWD, file)).isDirectory());
 
   _fs.writeFileSync(_path.join(CWD, 'WebpackTestRunner.js'), `// This file is auto-generated
 // Any change will be overriden

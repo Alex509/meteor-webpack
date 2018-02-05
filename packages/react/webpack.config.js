@@ -3,24 +3,10 @@ var weight = 100;
 function dependencies() {
   return {
     dependencies: {
-      'react': '^15.0.0',
-      'react-dom': '^15.0.0',
-      'react-addons-pure-render-mixin': '^15.0.0'
+
     },
     devDependencies: {
-      'babel': '^6.3.26',
-      'babel-core': '^6.3.26',
-      'babel-loader' : '^6.2.0',
-      'babel-preset-react': '^6.3.13',
-      'babel-preset-es2015': '^6.3.13',
-      'babel-preset-stage-0': '^6.3.13',
-      'babel-plugin-transform-decorators-legacy': '^1.3.2',
-      'babel-plugin-add-module-exports': '^0.1.2',
-      'babel-plugin-react-transform': '^2.0.0',
-      'expose-loader': '^0.7.1',
-      'react-transform-hmr' : '^1.0.1',
-      'react-transform-catch-errors': '^1.0.0',
-      'redbox-react': '^1.2.0'
+
     }
   };
 }
@@ -65,20 +51,20 @@ function config(settings, require) {
     babelSettings.plugins = [];
   }
 
-  if (babelSettings.presets.indexOf('react') < 0) {
-    babelSettings.presets.push('react');
-  }
-
-  if (babelSettings.presets.indexOf('es2015') < 0) {
-    babelSettings.presets.push('es2015');
-  }
-
-  if (babelSettings.presets.indexOf('stage-0') < 0 &&
-      babelSettings.presets.indexOf('stage-1') < 0 &&
-      babelSettings.presets.indexOf('stage-2') < 0 &&
-      babelSettings.presets.indexOf('stage-3') < 0) {
-    babelSettings.presets.push('stage-0');
-  }
+  // if (babelSettings.presets.indexOf('react') < 0) {
+  //   babelSettings.presets.push('react');
+  // }
+  //
+  // if (babelSettings.presets.indexOf('es2015') < 0) {
+  //   babelSettings.presets.push('es2015');
+  // }
+  //
+  // if (babelSettings.presets.indexOf('stage-0') < 0 &&
+  //     babelSettings.presets.indexOf('stage-1') < 0 &&
+  //     babelSettings.presets.indexOf('stage-2') < 0 &&
+  //     babelSettings.presets.indexOf('stage-3') < 0) {
+  //   babelSettings.presets.push('stage-0');
+  // }
 
   if (settings.babel && settings.babel.plugins) {
     babelSettings.plugins = babelSettings.plugins.concat(settings.babel.plugins);
@@ -111,17 +97,33 @@ function config(settings, require) {
 
   var usingMeteorReact = settings.packages.indexOf('react-runtime') >= 0;
   var extensions = ['.js', '.jsx'];
-  var loaders = [
-    { test: /\/node_modules\/react\/react\.js$/, loader: 'expose?React' },
-    { test: /\.jsx?$/, loader: 'babel', query: babelSettings, exclude: /\.meteor|node_modules/ }
-  ];
+  var loaders =
+      [
+    // { test: /\/node_modules\/react\/react\.js$/,
+    //   use: [{
+    //   loader: 'expose-loader',
+    //   options: 'React'
+    // }]
+    // },
+    { test: /\.jsx?$/,
+      exclude: /\.meteor|node_modules/,
+      use: [{ loader: 'babel-loader', options: {
+        presets: [[require('@babel/preset-env'), {
+          "targets" : {
+            "browsers": ["chrome >= 34", "safari >= 9", "ie >= 11", "edge >= 12","opera >= 16", "> 1%"]
+          }
+        }], require('@babel/preset-stage-0'), require('@babel/preset-react'), require('@babel/preset-flow')],
+        plugins: [require('@babel/plugin-transform-async-to-generator'), require('@babel/plugin-transform-modules-commonjs')] } }]
+  }];
 
-  if (settings.packages.indexOf('webpack:typescript') >= 0) {
-    loaders.push({ test: /\.tsx$/, loader: 'babel?' + JSON.stringify(babelSettings) + '!ts?' + JSON.stringify(tsConfig), exclude: /\.meteor|node_modules/ });
-    extensions.push('.tsx');
-  }
+  // if (settings.packages.indexOf('webpack:typescript') >= 0) {
+  //   loaders.push({ test: /\.tsx$/, loader: 'babel?' + JSON.stringify(babelSettings) + '!ts?' + JSON.stringify(tsConfig), exclude: /\.meteor|node_modules/ });
+  //   extensions.push('.tsx');
+  // }
 
   var externals = {};
+
+  // console.log(require('util').inspect(loaders, { depth: 9, colors: true }));
 
   if (settings.isTest || settings.isAppTest) {
     // Support for Enzyme
@@ -129,9 +131,8 @@ function config(settings, require) {
     externals['react/lib/ExecutionEnvironment'] = true;
     externals['react/lib/ReactContext'] = true;
   }
-
   return {
-    loaders: loaders,
+    rules: loaders,
     extensions: extensions,
     externals: externals
   };

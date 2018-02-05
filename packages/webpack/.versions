@@ -1,4 +1,4 @@
-alex509:webpack@1.3.5
+alex509:webpack@2.0.0
 babel-compiler@6.20.0
 babel-runtime@1.0.1
 ecmascript@0.8.2
@@ -11,9 +11,9 @@ modules-runtime@0.8.0
 promise@0.9.0
 reload@1.1.11
 underscore@1.0.10
-webpack:assets@1.0.1
-webpack:core-config@1.0.1
-webpack:css@1.1.1
-webpack:json@1.0.1
+webpack:assets@2.0.0
+webpack:core-config@2.0.0
+webpack:css@2.0.0
+webpack:json@2.0.0
 webpack:npmworkaround@1.0.0
 webpack:reload@1.0.1
