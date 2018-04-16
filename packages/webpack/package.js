@@ -24,6 +24,7 @@ Package.registerBuildPlugin({
       'cors': '2.7.1',
       'webpack-dev-middleware': '2.0.4',
       'webpack-hot-middleware': '2.10.0',
+      'webpack-node-externals': '1.5.4',
       'memory-fs': '0.3.0',
       'circular-dependency-plugin' : '4.4.0'
     }
